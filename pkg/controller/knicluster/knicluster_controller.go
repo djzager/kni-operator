@@ -124,6 +124,14 @@ func (r *ReconcileKNICluster) ensureOperatorGroup(instance *kniv1alpha1.KNIClust
 	// already exists - don't requeue
 	reqLogger.Info("OperatorGroup already exists", "OperatorGroup.Namespace", found.Namespace, "OperatorGroup.Name", found.Name)
 
+	// Add it to the list of RelatedObjects if found
+	kniv1alpha1.SetObjectReference(&instance.Status.RelatedObjects, kniv1alpha1.ObjectReference{
+		APIVersion: found.TypeMeta.APIVersion,
+		Kind:       found.TypeMeta.Kind,
+		Namespace:  found.Namespace,
+		Name:       found.Name,
+	})
+
 	return nil
 }
 
@@ -150,6 +158,14 @@ func (r *ReconcileKNICluster) ensureSubscription(instance *kniv1alpha1.KNICluste
 
 	// already exists - don't requeue
 	reqLogger.Info("Subscription already exists", "Subscription.Namespace", found.Namespace, "Subscription.Name", found.Name)
+
+	// Add it to the list of RelatedObjects if found
+	kniv1alpha1.SetObjectReference(&instance.Status.RelatedObjects, kniv1alpha1.ObjectReference{
+		APIVersion: found.TypeMeta.APIVersion,
+		Kind:       found.TypeMeta.Kind,
+		Namespace:  found.Namespace,
+		Name:       found.Name,
+	})
 
 	return nil
 }
@@ -196,6 +212,15 @@ func (r *ReconcileKNICluster) ensureCatalogSource(instance *kniv1alpha1.KNIClust
 			return err
 		}
 	}
+
+	// Add it to the list of RelatedObjects if found
+	kniv1alpha1.SetObjectReference(&instance.Status.RelatedObjects, kniv1alpha1.ObjectReference{
+		APIVersion: found.TypeMeta.APIVersion,
+		Kind:       found.TypeMeta.Kind,
+		Namespace:  found.Namespace,
+		Name:       found.Name,
+	})
+
 	return nil
 }
 
@@ -276,10 +301,24 @@ func (r *ReconcileKNICluster) Reconcile(request reconcile.Request) (reconcile.Re
 	} {
 		err = f(instance, reqLogger)
 		if err != nil {
+			kniv1alpha1.SetCondition(&instance.Status.Conditions, kniv1alpha1.Condition{
+				Type:    kniv1alpha1.ConditionTypeHealthy,
+				Status:  kniv1alpha1.ConditionStatusFalse,
+				Reason:  kniv1alpha1.ReconcileFailed,
+				Message: err.Error(),
+			})
+			_ = r.client.Status().Update(context.TODO(), instance)
 			return reconcile.Result{}, err
 		}
 	}
 
+	kniv1alpha1.SetCondition(&instance.Status.Conditions, kniv1alpha1.Condition{
+		Type:    kniv1alpha1.ConditionTypeHealthy,
+		Status:  kniv1alpha1.ConditionStatusTrue,
+		Reason:  kniv1alpha1.ReconcileSucceeded,
+		Message: "Reconcile completed successfully",
+	})
+	_ = r.client.Status().Update(context.TODO(), instance)
 	return reconcile.Result{}, nil
 }
 

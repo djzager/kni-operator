@@ -21,6 +21,15 @@ type KNIClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
+
+	// Conditions is a list of conditions for this operator.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +optional
+	Conditions []Condition `json:"conditions,omitempty"  patchStrategy:"merge" patchMergeKey:"type"`
+
+	// RelatedObjects is a list of objects that are "interesting" or related to this operator.
+	RelatedObjects []ObjectReference `json:"relatedObjects,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
